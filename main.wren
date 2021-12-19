@@ -3,6 +3,7 @@
 import "graphics" for Canvas, Color
 import "font" for Font
 import "dome" for Platform, Window
+import "input" for Keyboard
 import "io" for FileSystem 
 
 // var DefaultFont = "/usr/share/fonts/truetype/piboto/Piboto-Regular.ttf"
@@ -27,7 +28,7 @@ class Cursor {
 class Text {
 
   // https://rosettacode.org/wiki/Category_talk:Wren-fmt
-  rjust(s, w) {
+  static rjust(s, w) {
     var c = s.count
     return (w > c) ? " " * (w - c) + s : s
   }
@@ -39,7 +40,11 @@ class Text {
 
   gutterPrint(lineNumber, y) {
     var w = _lines.count.max(10).toString.count
-    Canvas.print(rjust(lineNumber.toString, w), 2, y, Color.white)
+    Canvas.print(Text.rjust(lineNumber.toString, w), 2, y, Color.white)
+  }
+
+  count {
+    return _lines.count
   }
 
   construct new(text) {
@@ -69,12 +74,18 @@ class Text {
     return Cursor.new(x + gutterWidth, y) 
   }
 
-  print() {
+  print(cursorX, cursorY, cursorOn) {
     var y = 6
-    var lineNumber = 1
+    var lineNumber = 0
 
     for (line in _lines) {
-      gutterPrint(lineNumber, y)
+      gutterPrint(lineNumber + 1, y)
+
+      if (cursorOn && lineNumber == cursorY) {
+        var rect = cursor(cursorX, y)
+        Canvas.rect(rect.x, rect.y, rect.w, rect.h, Color.green)
+      }
+
       for (shortLine in Text.fit(line, Canvas.width - gutterWidth - 4)) {
         Canvas.print(shortLine, gutterWidth + 2, y, Color.white)
         y = y + FontSize + 4
@@ -99,6 +110,7 @@ class Main {
     _x = 0
     _y = 0
     _cursorOn = true
+    _debounce = 0
   }
 
   update() {
@@ -107,6 +119,25 @@ class Main {
       Canvas.resize(Window.width, Window.height, BackgroundColor)
     }
     _cursorOn = Platform.time % 2 == 1
+
+    if (_debounce == 0) {
+      if (Keyboard.isKeyDown("Up")) {
+        System.print("Up")
+        _debounce = 10
+        if (_y > 0) {
+          _y = _y - 1
+        }
+      } else if (Keyboard.isKeyDown("Down")) {
+        System.print("Down")
+        _debounce = 10
+        if (_y < _text.count) {
+          _y = _y + 1
+        }
+      }
+    } else {
+      _debounce = _debounce - 1
+    }
+
   }
 
   draw(alpha) {
@@ -121,12 +152,8 @@ class Main {
 
     // Gutter
     Canvas.rectfill(0, 0, gutterWidth, Canvas.height - FontSize - 4, Color.darkblue)
-    _text.print()
 
-    var cursor = _text.cursor(_x, _y)
-    if (_cursorOn) {
-      Canvas.rect(cursor.x, cursor.y, cursor.w, cursor.h, Color.green)
-    }
+    _text.print(_x, _y, _cursorOn)
   }
 }
 
