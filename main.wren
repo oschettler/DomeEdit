@@ -47,6 +47,10 @@ class Text {
     return _lines.count
   }
 
+  [index] {
+    return _lines[index]
+  }
+
   construct new(text) {
     _lines = text.split("\n")
   }
@@ -81,14 +85,25 @@ class Text {
     for (line in _lines) {
       gutterPrint(lineNumber + 1, y)
 
-      if (cursorOn && lineNumber == cursorY) {
-        var rect = cursor(cursorX, y)
-        Canvas.rect(rect.x, rect.y, rect.w, rect.h, Color.green)
-      }
+      var realCursorX = cursorX.min(line.count)
+      var offsetX = 0
+      var offsetY = 0
+      var shortLines = Text.fit(line, Canvas.width - gutterWidth - 4)
+      for (shortLine in shortLines) {
+        var gw = gutterWidth
+        Canvas.print(shortLine, gw + 2, y, Color.white)
 
-      for (shortLine in Text.fit(line, Canvas.width - gutterWidth - 4)) {
-        Canvas.print(shortLine, gutterWidth + 2, y, Color.white)
+        if (cursorOn && lineNumber == cursorY && realCursorX >= offsetX && (realCursorX < offsetX + shortLine.count || offsetY == shortLines.count - 1 && realCursorX == line.count)) {  
+          var end = realCursorX - offsetX
+          //System.print("%(shortLine). len=%(shortLine.count) realX=%(realCursorX) offsX=%(offsetX) end=%(end)")
+         
+          var prefixArea = Canvas.getPrintArea(shortLine[0 ... end])
+          Canvas.rectfill(gw + prefixArea.x, y - 2, 2, FontSize, Color.green)
+        }
+
         y = y + FontSize + 4
+        offsetY = offsetY + 1
+        offsetX = offsetX + shortLine.count
       }
       lineNumber = lineNumber + 1
     }
@@ -122,16 +137,28 @@ class Main {
 
     if (_debounce == 0) {
       if (Keyboard.isKeyDown("Up")) {
-        System.print("Up")
         _debounce = 10
+        _cursorOn = true
         if (_y > 0) {
           _y = _y - 1
         }
       } else if (Keyboard.isKeyDown("Down")) {
-        System.print("Down")
         _debounce = 10
-        if (_y < _text.count) {
+        _cursorOn = true
+        if (_y < _text.count - 1) {
           _y = _y + 1
+        }
+      } else if (Keyboard.isKeyDown("Left")) {
+        _debounce = 10
+        _cursorOn = true
+        if (_x > 0) {
+          _x = _x - 1
+        }
+      } else if (Keyboard.isKeyDown("Right")) {
+        _debounce = 10
+        _cursorOn = true
+        if (_x < _text[_y].count) {
+          _x = _x + 1
         }
       }
     } else {
