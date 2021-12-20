@@ -9,7 +9,7 @@ import "io" for FileSystem
 // var DefaultFont = "/usr/share/fonts/truetype/piboto/Piboto-Regular.ttf"
 // var DefaultFont = "/usr/share/fonts/truetype/noto/NotoMono-Regular.ttf"
 var DefaultFont = "UbuntuMono-R.ttf"
-var FontSize = 14
+var FontSize = 16
 var BackgroundColor = Color.black
 
 class Text {
@@ -103,6 +103,8 @@ class Main {
     Canvas.font = "default"
 
     _fileName = "README.md"
+
+    Window.title = "DomeEdit: %(_fileName)"
 
     _text = Text.load(_fileName)
     _x = 0
