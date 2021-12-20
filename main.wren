@@ -7,23 +7,10 @@ import "input" for Keyboard
 import "io" for FileSystem 
 
 // var DefaultFont = "/usr/share/fonts/truetype/piboto/Piboto-Regular.ttf"
-var DefaultFont = "/usr/share/fonts/truetype/noto/NotoMono-Regular.ttf"
+// var DefaultFont = "/usr/share/fonts/truetype/noto/NotoMono-Regular.ttf"
+var DefaultFont = "UbuntuMono-R.ttf"
 var FontSize = 14
 var BackgroundColor = Color.black
-
-class Cursor {
-  x { _x }
-  y { _y }
-  w { _w }
-  h { _h }
-
-  construct new(x, y) {
-    _x = x
-    _y = y
-    _w = 10
-    _h = FontSize
-  }
-}
 
 class Text {
 
@@ -62,7 +49,7 @@ class Text {
   static fit(line, width) {
     var area = Canvas.getPrintArea(line)
     
-    if (area.x < width) {
+    if (area.x <= width) {
       return [ line ]
     }
     
@@ -74,13 +61,10 @@ class Text {
     return lines
   }
 
-  cursor(x, y) {
-    return Cursor.new(x + gutterWidth, y) 
-  }
-
   print(cursorX, cursorY, cursorOn) {
     var y = 6
     var lineNumber = 0
+    var gw = gutterWidth
 
     for (line in _lines) {
       gutterPrint(lineNumber + 1, y)
@@ -88,9 +72,8 @@ class Text {
       var realCursorX = cursorX.min(line.count)
       var offsetX = 0
       var offsetY = 0
-      var shortLines = Text.fit(line, Canvas.width - gutterWidth - 4)
+      var shortLines = Text.fit(line, Canvas.width - gw - 4)
       for (shortLine in shortLines) {
-        var gw = gutterWidth
         Canvas.print(shortLine, gw + 2, y, Color.white)
 
         if (cursorOn && lineNumber == cursorY && realCursorX >= offsetX && (realCursorX < offsetX + shortLine.count || offsetY == shortLines.count - 1 && realCursorX == line.count)) {  
@@ -164,7 +147,6 @@ class Main {
     } else {
       _debounce = _debounce - 1
     }
-
   }
 
   draw(alpha) {
