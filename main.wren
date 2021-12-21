@@ -2,7 +2,7 @@
 
 import "graphics" for Canvas, Color
 import "font" for Font
-import "dome" for Platform, Window
+import "dome" for Platform, Process, Window
 import "input" for Keyboard
 import "io" for FileSystem 
 
@@ -56,7 +56,7 @@ class Text {
     var split = (line.count * width / area.x).floor
 
     var lines = Text.fit(line[0...split], width)
-    lines.addAll(Text.fit(line[split...line.count], width))
+    lines.addAll(Text.fit(line[split..-1], width))
     
     return lines
   }
@@ -102,15 +102,21 @@ class Main {
     Font["default"].antialias = true
     Canvas.font = "default"
 
-    _fileName = "README.md"
+    var args = Process.args[2..-1]
+
+    _fileName = args.count > 0 ? args[0] : "README.md"
 
     Window.title = "DomeEdit: %(_fileName)"
+    //Window.lockstep = true
+
+    Keyboard.handleText = true
 
     _text = Text.load(_fileName)
     _x = 0
     _y = 0
     _cursorOn = true
     _debounce = 0
+    _dirty = false
   }
 
   update() {
@@ -119,6 +125,11 @@ class Main {
       Canvas.resize(Window.width, Window.height, BackgroundColor)
     }
     _cursorOn = Platform.time % 2 == 1
+
+    if (Keyboard.text.count > 0) {
+      var line = _text[_y] 
+      _text[_y] = line[0..._x] + Keyboard.text + line[_x..-1]
+    }
 
     if (_debounce == 0) {
       if (Keyboard.isKeyDown("Up")) {
@@ -159,7 +170,10 @@ class Main {
     // Status line
     var statusY = Canvas.height - FontSize - 4
     Canvas.rectfill(0, statusY, Canvas.width, FontSize + 4, Color.darkblue)
-    Canvas.print("%(_fileName) %(_y+1):%(_x+1)", 4, statusY + 6, Color.white)
+    Canvas.print("%(_fileName) %(_y+1):%(_x+1)", 10, statusY + 6, Color.white)
+    if (_dirty) {
+      Canvas.print("*", 4, statusY + 6, Color.red)
+    }
 
     // Gutter
     Canvas.rectfill(0, 0, gutterWidth, Canvas.height - FontSize - 4, Color.darkblue)
