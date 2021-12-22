@@ -1,6 +1,6 @@
-# Dome Edit
+# Lines - A small text editor
 
-An editor, written in [Dome Engine](https://domeengine.com/)
+Lines is a small text editor, written in [Dome Engine](https://domeengine.com/)
 
 I aspire to make this into an outline editor for Knowfox, but the first iteration will be much less ambituous.
 
