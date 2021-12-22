@@ -1,4 +1,4 @@
-// Dome Editor
+// Lines - A small text editor
 
 import "graphics" for Canvas, Color
 import "font" for Font
@@ -50,6 +50,24 @@ class Text {
   currentLine=(value) { 
     _lines[_y] = value
     System.print("Ln(%(_y)): %(value)")
+  }
+
+  splitCurrentLine() {
+    var line = currentLine
+    var prefix = line[0...cursorX]
+    var suffix = line[cursorX..-1]
+    currentLine = prefix
+    cursorY = cursorY + 1
+    _lines.insert(cursorY, suffix)
+    cursorX = 0  
+  }
+
+  joinCurrentLine() {
+    var line = currentLine
+    _lines.removeAt(cursorY)
+    cursorY = cursorY - 1
+    cursorX = currentLine.count
+    currentLine = currentLine + line
   }
 
   visibleLinesCount { _visibleLines.count }
@@ -191,16 +209,27 @@ class Main {
     }
     _cursorOn = Platform.time % 2 == 1
 
+    var line = _text.currentLine
+    var cursorX = _text.cursorX 
+
     if (Keyboard.text.count > 0) {
-      var line = _text.currentLine
-      var cursorX = _text.cursorX 
       _text.currentLine = line[0...cursorX] + Keyboard.text + line[cursorX..-1]
-      _text.cursorX = _text.cursorX + Keyboard.text.count  
+      _text.cursorX = cursorX + Keyboard.text.count  
       _text.fit(_topLineNumber, _statusY)
       _dirty = true
-    }
-
-    if (Keyboard["up"].justPressed) {
+    } else if (Keyboard["backspace"].justPressed) {
+      if (_text.cursorX > 0) {
+        _text.currentLine = line[0...(cursorX - 1)] + line[cursorX..-1]
+        _text.cursorX = cursorX - 1  
+      } else if (_text.cursorY > 0) {
+        _text.joinCurrentLine()
+      }
+      _text.fit(_topLineNumber, _statusY)
+    } else if (Keyboard["return"].justPressed) {
+      _text.splitCurrentLine()
+      _text.fit(_topLineNumber, _statusY)
+      _dirty = true
+    } else if (Keyboard["up"].justPressed) {
       _cursorOn = true
       if (_text.cursorY > 0) {
         _text.cursorY = _text.cursorY - 1
