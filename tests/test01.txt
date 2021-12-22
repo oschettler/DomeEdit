@@ -1,0 +1,23 @@
+Eine Testdatei. Es gibt ein paar kurze Zeilen. Und ein paar lange. Gaanz lange Zeilen. Mit Ümläuten.
+
+Manche Zeilen sind auch kürzer.
+Ganz kurz.
+G
+a
+n
+z
+ 
+kurz.
+Ümäöuteß
+---
+Eine Testdatei. Es gibt ein paar kurze Zeilen. Und ein paar lange. Gaanz lange Zeilen. Mit Ümläuten.
+
+Manche Zeilen sind auch kürzer.
+Ganz kurz.
+G
+a
+n
+z
+ 
+kurz.
+Ümäöuteß
