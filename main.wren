@@ -104,7 +104,7 @@ class Text {
       }
     }
 
-    _y = _y.min(topLineNumber + lineNumber - 1)
+    _y = _y.min(topLineNumber + _visibleLines.count - 1)
 
     System.print("Fit: %(topLineNumber) -> %(_visibleLines.count)")
   }
@@ -166,7 +166,6 @@ class Main {
     _text = Text.load(_fileName)
     _topLineNumber = 0
     _cursorOn = true
-    _debounce = 0
     _dirty = false
     _changes = false
 
@@ -201,44 +200,36 @@ class Main {
       _dirty = true
     }
 
-    if (_debounce == 0) {
-      if (Keyboard.isKeyDown("up")) {
-        _debounce = 10
-        _cursorOn = true
-        if (_text.cursorY > 0) {
-          _text.cursorY = _text.cursorY - 1
-        }
-        if (_text.cursorY < _topLineNumber) {
-          _topLineNumber = _topLineNumber - 1
-          _text.fit(_topLineNumber, _statusY)
-        }
-      } else if (Keyboard.isKeyDown("down")) {
-        _debounce = 10
-        _cursorOn = true
-        if (_text.cursorY < _text.count - 1) {
-          _text.cursorY = _text.cursorY + 1
-        }
-        if (_text.cursorY >= _topLineNumber + _text.visibleLinesCount) {
-          _topLineNumber = _topLineNumber + 1
-          _text.fit(_topLineNumber, _statusY)
-        }
-      } else if (Keyboard.isKeyDown("left")) {
-        _debounce = 10
-        _cursorOn = true
-        if (_text.cursorX > 0) {
-          _text.cursorX = _text.cursorX - 1
-        }
-      } else if (Keyboard.isKeyDown("right")) {
-        _debounce = 10
-        _cursorOn = true
-        if (_text.cursorX < _text.currentLine.count) {
-          _text.cursorX = _text.cursorX + 1
-        }
-      } else if ((Keyboard["left ctrl"].down || Keyboard["right ctrl"].down) && Keyboard["s"].justPressed) {
-        save()
+    if (Keyboard["up"].justPressed) {
+      _cursorOn = true
+      if (_text.cursorY > 0) {
+        _text.cursorY = _text.cursorY - 1
       }
-    } else {
-      _debounce = _debounce - 1
+      if (_text.cursorY < _topLineNumber) {
+        _topLineNumber = _topLineNumber - 1
+        _text.fit(_topLineNumber, _statusY)
+      }
+    } else if (Keyboard["down"].justPressed) {
+      _cursorOn = true
+      if (_text.cursorY < _text.count - 1) {
+        _text.cursorY = _text.cursorY + 1
+      }
+      if (_text.cursorY >= _topLineNumber + _text.visibleLinesCount) {
+        _topLineNumber = _topLineNumber + 1
+        _text.fit(_topLineNumber, _statusY)
+      }
+    } else if (Keyboard["left"].justPressed) {
+      _cursorOn = true
+      if (_text.cursorX > 0) {
+        _text.cursorX = _text.cursorX - 1
+      }
+    } else if (Keyboard["right"].justPressed) {
+      _cursorOn = true
+      if (_text.cursorX < _text.currentLine.count) {
+        _text.cursorX = _text.cursorX + 1
+      }
+    } else if ((Keyboard["left ctrl"].down || Keyboard["right ctrl"].down) && Keyboard["s"].justPressed) {
+      save()
     }
   }
 
