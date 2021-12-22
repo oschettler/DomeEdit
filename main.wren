@@ -10,6 +10,7 @@ import "io" for FileSystem
 // var DefaultFont = "/usr/share/fonts/truetype/noto/NotoMono-Regular.ttf"
 var DefaultFont = "UbuntuMono-R.ttf"
 var FontSize = 16
+var LineHeight = FontSize + 4
 var BackgroundColor = Color.black
 
 class Text {
@@ -38,14 +39,37 @@ class Text {
     return _lines[index]
   }
 
+  cursorX { 
+    var lineLength = _lines[_y].count
+    return _x.min(lineLength)
+  }
+  cursorX=(value) { _x = value }
+  cursorY { _y }
+  cursorY=(value) { _y = value }
+  currentLine { _lines[_y] }
+  currentLine=(value) { 
+    _lines[_y] = value
+    System.print("Ln(%(_y)): %(value)")
+  }
+
+  visibleLinesCount { _visibleLines.count }
+
   construct new(text) {
     _lines = text.split("\n")
+    _visibleLines = []
+    _x = 0
+    _y = 0
   }
 
   static load(fileName) {
     return Text.new(FileSystem.load(fileName))
   }
 
+  save(fileName) {
+    FileSystem.save(fileName, _lines.join("\n"))
+  }
+
+  // Split a single line into a list of short lines to fit into a given width
   static fit(line, width) {
     var area = Canvas.getPrintArea(line)
     
@@ -61,30 +85,58 @@ class Text {
     return lines
   }
 
-  print(cursorX, cursorY, cursorOn) {
-    var y = 6
+  // Fit a list of lines 
+  fit(topLineNumber, height) {
+    _visibleLines = []
+
     var lineNumber = 0
+    var textWidth = Canvas.width - gutterWidth - 4
+    var linesCount = (height / LineHeight).floor.min(_lines.count)
+
+    for (line in _lines[topLineNumber...linesCount]) {
+      var shortLines = Text.fit(line, textWidth)
+      var visibleCount = (linesCount - lineNumber).min(shortLines.count)
+      _visibleLines.add(shortLines[0...visibleCount])
+
+      lineNumber = lineNumber + visibleCount
+      if (lineNumber >= linesCount) {
+        break
+      }
+    }
+
+    _y = _y.min(topLineNumber + lineNumber - 1)
+
+    System.print("Fit: %(topLineNumber) -> %(_visibleLines.count)")
+  }
+
+  print(topLineNumber, cursorOn) {
+    var y = 6
+    var lineNumber = topLineNumber
     var gw = gutterWidth
 
-    for (line in _lines) {
+    for (line in _visibleLines) {
       gutterPrint(lineNumber + 1, y)
 
-      var realCursorX = cursorX.min(line.count)
+      var lineLength = _lines[lineNumber].count
+
+      // If the cursor is further right than the total line length
+      var realCursorX = cursorX
+
       var offsetX = 0
       var offsetY = 0
-      var shortLines = Text.fit(line, Canvas.width - gw - 4)
-      for (shortLine in shortLines) {
-        Canvas.print(shortLine, gw + 2, y, Color.white)
+      for (shortLine in line) {
+        Canvas.print(shortLine, gw + 4, y, Color.white)
 
-        if (cursorOn && lineNumber == cursorY && realCursorX >= offsetX && (realCursorX < offsetX + shortLine.count || offsetY == shortLines.count - 1 && realCursorX == line.count)) {  
+        // Cursor can be placed within or at the end of the logical line
+        if (cursorOn && lineNumber == cursorY && realCursorX >= offsetX && (realCursorX < offsetX + shortLine.count || offsetY == line.count - 1 && realCursorX == lineLength)) {  
           var end = realCursorX - offsetX
           //System.print("%(shortLine). len=%(shortLine.count) realX=%(realCursorX) offsX=%(offsetX) end=%(end)")
          
           var prefixArea = Canvas.getPrintArea(shortLine[0 ... end])
-          Canvas.rectfill(gw + prefixArea.x, y - 2, 2, FontSize, Color.green)
+          Canvas.rectfill(gw + 2 + prefixArea.x, y - 2, 2, FontSize, Color.green)
         }
 
-        y = y + FontSize + 4
+        y = y + LineHeight
         offsetY = offsetY + 1
         offsetX = offsetX + shortLine.count
       }
@@ -112,50 +164,78 @@ class Main {
     Keyboard.handleText = true
 
     _text = Text.load(_fileName)
-    _x = 0
-    _y = 0
+    _topLineNumber = 0
     _cursorOn = true
     _debounce = 0
+    _dirty = false
+    _changes = false
+
+    resize()
+  }
+
+  resize() {
+    System.print("Resize -> %(Window.width), %(Window.height)")
+    Canvas.resize(Window.width, Window.height, BackgroundColor)
+    _statusY = Canvas.height - FontSize - 4
+
+    _text.fit(_topLineNumber, _statusY)
+  }
+
+  save() {
+    _text.save(_fileName)
     _dirty = false
   }
 
   update() {
     if (Canvas.width != Window.width || Canvas.height != Window.height) {
-      System.print("Resize -> %(Window.width), %(Window.height)")
-      Canvas.resize(Window.width, Window.height, BackgroundColor)
+      resize()
     }
     _cursorOn = Platform.time % 2 == 1
 
     if (Keyboard.text.count > 0) {
-      var line = _text[_y] 
-      _text[_y] = line[0..._x] + Keyboard.text + line[_x..-1]
+      var line = _text.currentLine
+      var cursorX = _text.cursorX 
+      _text.currentLine = line[0...cursorX] + Keyboard.text + line[cursorX..-1]
+      _text.cursorX = _text.cursorX + Keyboard.text.count  
+      _text.fit(_topLineNumber, _statusY)
+      _dirty = true
     }
 
     if (_debounce == 0) {
-      if (Keyboard.isKeyDown("Up")) {
+      if (Keyboard.isKeyDown("up")) {
         _debounce = 10
         _cursorOn = true
-        if (_y > 0) {
-          _y = _y - 1
+        if (_text.cursorY > 0) {
+          _text.cursorY = _text.cursorY - 1
         }
-      } else if (Keyboard.isKeyDown("Down")) {
+        if (_text.cursorY < _topLineNumber) {
+          _topLineNumber = _topLineNumber - 1
+          _text.fit(_topLineNumber, _statusY)
+        }
+      } else if (Keyboard.isKeyDown("down")) {
         _debounce = 10
         _cursorOn = true
-        if (_y < _text.count - 1) {
-          _y = _y + 1
+        if (_text.cursorY < _text.count - 1) {
+          _text.cursorY = _text.cursorY + 1
         }
-      } else if (Keyboard.isKeyDown("Left")) {
+        if (_text.cursorY >= _topLineNumber + _text.visibleLinesCount) {
+          _topLineNumber = _topLineNumber + 1
+          _text.fit(_topLineNumber, _statusY)
+        }
+      } else if (Keyboard.isKeyDown("left")) {
         _debounce = 10
         _cursorOn = true
-        if (_x > 0) {
-          _x = _x - 1
+        if (_text.cursorX > 0) {
+          _text.cursorX = _text.cursorX - 1
         }
-      } else if (Keyboard.isKeyDown("Right")) {
+      } else if (Keyboard.isKeyDown("right")) {
         _debounce = 10
         _cursorOn = true
-        if (_x < _text[_y].count) {
-          _x = _x + 1
+        if (_text.cursorX < _text.currentLine.count) {
+          _text.cursorX = _text.cursorX + 1
         }
+      } else if ((Keyboard["left ctrl"].down || Keyboard["right ctrl"].down) && Keyboard["s"].justPressed) {
+        save()
       }
     } else {
       _debounce = _debounce - 1
@@ -168,17 +248,16 @@ class Main {
     var gutterWidth = _text.gutterWidth
 
     // Status line
-    var statusY = Canvas.height - FontSize - 4
-    Canvas.rectfill(0, statusY, Canvas.width, FontSize + 4, Color.darkblue)
-    Canvas.print("%(_fileName) %(_y+1):%(_x+1)", 10, statusY + 6, Color.white)
+    Canvas.rectfill(0, _statusY, Canvas.width, FontSize + 4, Color.darkblue)
+    Canvas.print("%(_fileName) %(_text.cursorY+1):%(_text.cursorX+1)", gutterWidth + 4, _statusY + 4, Color.white)
     if (_dirty) {
-      Canvas.print("*", 4, statusY + 6, Color.red)
+      Canvas.print("*", 6, _statusY + 6, Color.white)
     }
 
     // Gutter
     Canvas.rectfill(0, 0, gutterWidth, Canvas.height - FontSize - 4, Color.darkblue)
 
-    _text.print(_x, _y, _cursorOn)
+    _text.print(_topLineNumber, _cursorOn)
   }
 }
 
