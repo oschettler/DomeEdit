@@ -93,7 +93,7 @@ class Text {
     var textWidth = Canvas.width - gutterWidth - 4
     var linesCount = (height / LineHeight).floor.min(_lines.count)
 
-    for (line in _lines[topLineNumber...linesCount]) {
+    for (line in _lines[topLineNumber...(topLineNumber + linesCount)]) {
       var shortLines = Text.fit(line, textWidth)
       var visibleCount = (linesCount - lineNumber).min(shortLines.count)
       _visibleLines.add(shortLines[0...visibleCount])
@@ -104,7 +104,7 @@ class Text {
       }
     }
 
-    _y = _y.min(topLineNumber + _visibleLines.count - 1)
+    //_y = _y.min(topLineNumber + _visibleLines.count - 1)
 
     System.print("Fit: %(topLineNumber) -> %(_visibleLines.count)")
   }
